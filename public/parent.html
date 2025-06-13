@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head><title>Parent Dashboard</title></head>
+<body>
+  <h2>Live Screen</h2>
+  <video id="live" autoplay playsinline></video>
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+  <script>
+    const socket = io('http://localhost:3000'); // Change to your server
+    const video = document.getElementById('live');
+    let mediaSource = new MediaSource();
+    video.src = URL.createObjectURL(mediaSource);
+  
+    mediaSource.addEventListener("sourceopen", () => {
+      const sourceBuffer = mediaSource.addSourceBuffer('video/webm; codecs="vp8"');
+  
+      socket.on('screen-data', (data) => {
+        // Rebuild blob from ArrayBuffer
+        const blob = new Blob([data], { type: 'video/webm' });
+  
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          try {
+            sourceBuffer.appendBuffer(new Uint8Array(reader.result));
+          } catch (e) {
+            console.error("appendBuffer error:", e);
+          }
+        };
+        reader.readAsArrayBuffer(blob);
+      });
+    });
+  </script>
+  
+</body>
+</html>
