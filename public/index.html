@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head><title>Child Screen Share</title></head>
+<body>
+  <button onclick="startSharing()">Start Sharing</button>
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+  <script>
+    const socket = io('http://localhost:3000'); // Change this to your server
+  
+    async function startSharing() {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+  
+      mediaRecorder.ondataavailable = async e => {
+        if (e.data && e.data.size > 0) {
+          const arrayBuffer = await e.data.arrayBuffer();
+          socket.emit('screen-data', arrayBuffer);
+        }
+      };
+  
+      mediaRecorder.start(200);
+    }
+  </script>
+  
+</body>
+</html>
