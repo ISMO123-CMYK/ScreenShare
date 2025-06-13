@@ -6,7 +6,7 @@
   <video id="live" autoplay playsinline></video>
   <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
   <script>
-    const socket = io('http://localhost:3000'); // Change to your server
+    const socket = io('https://screenshare-am2q.onrender.com/'); // Change to your server
     const video = document.getElementById('live');
     let mediaSource = new MediaSource();
     video.src = URL.createObjectURL(mediaSource);
