@@ -5,7 +5,7 @@
   <button onclick="startSharing()">Start Sharing</button>
   <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
   <script>
-    const socket = io('http://localhost:3000'); // Change this to your server
+    const socket = io('https://screenshare-am2q.onrender.com/'); // Change this to your server
   
     async function startSharing() {
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
