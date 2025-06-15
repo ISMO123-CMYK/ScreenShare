@@ -1,26 +1,56 @@
+<!-- index.html -->
 <!DOCTYPE html>
-<html>
-<head><title>Child Screen Share</title></head>
-<body>
-  <button onclick="startSharing()">Start Sharing</button>
-  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Typing Battle</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+  <div class="text-center space-y-6">
+    <h1 class="text-2xl font-bold">Typing Speed Battle</h1>
+    <div id="login">
+      <input id="name" class="p-2 border rounded" placeholder="Enter your name" />
+      <button onclick="joinGame()" class="bg-blue-500 text-white px-4 py-2 rounded">Join</button>
+    </div>
+    <div id="game" class="hidden space-y-4">
+      <div class="text-lg font-mono bg-white p-3 rounded border inline-block" id="challenge">...</div>
+      <input id="input" class="p-2 border rounded w-80" placeholder="Start typing..." oninput="checkTyped()" />
+      <div id="status" class="text-green-500 font-semibold"></div>
+    </div>
+  </div>
+
   <script>
-    const socket = io('https://screenshare-am2q.onrender.com/'); // Change this to your server
-  
-    async function startSharing() {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-  
-      mediaRecorder.ondataavailable = async e => {
-        if (e.data && e.data.size > 0) {
-          const arrayBuffer = await e.data.arrayBuffer();
-          socket.emit('screen-data', arrayBuffer);
-        }
-      };
-  
-      mediaRecorder.start(200);
+    const socket = io('http://localhost:3000');
+    let challengeText = '';
+
+    function joinGame() {
+      const name = document.getElementById('name').value;
+      if (!name) return alert("Enter your name first!");
+
+      document.getElementById('login').classList.add('hidden');
+      document.getElementById('game').classList.remove('hidden');
+
+      socket.emit('join', name);
+    }
+
+    socket.on('start', (text) => {
+      challengeText = text;
+      document.getElementById('challenge').textContent = text;
+      document.getElementById('input').value = '';
+      document.getElementById('status').textContent = '';
+    });
+
+    socket.on('winner', (name) => {
+      document.getElementById('status').textContent = `${name} won the round! 🎉`;
+    });
+
+    function checkTyped() {
+      const typed = document.getElementById('input').value;
+      socket.emit('typed', typed);
     }
   </script>
-  
 </body>
 </html>
