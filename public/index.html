@@ -1,56 +1,67 @@
-<!-- index.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Typing Battle</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <title>NextGenEngine ECS Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+  <script src="game-engine.js"></script>
+  <style>
+    html,body { margin:0; overflow:hidden; width:100vw; height:100vh; background:#228822; }
+    #babylon-canvas { position:absolute; left:0; top:0; width:100vw; height:100vh; z-index:1; }
+    #phaser-ui      { position:absolute; left:0; top:0; width:100vw; height:100vh; z-index:2; pointer-events:none; background:transparent !important; }
+    #fatal-error-overlay { z-index: 9999; }
+  </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center h-screen">
-  <div class="text-center space-y-6">
-    <h1 class="text-2xl font-bold">Typing Speed Battle</h1>
-    <div id="login">
-      <input id="name" class="p-2 border rounded" placeholder="Enter your name" />
-      <button onclick="joinGame()" class="bg-blue-500 text-white px-4 py-2 rounded">Join</button>
-    </div>
-    <div id="game" class="hidden space-y-4">
-      <div class="text-lg font-mono bg-white p-3 rounded border inline-block" id="challenge">...</div>
-      <input id="input" class="p-2 border rounded w-80" placeholder="Start typing..." oninput="checkTyped()" />
-      <div id="status" class="text-green-500 font-semibold"></div>
-    </div>
-  </div>
-
+<body>
+  <canvas id="babylon-canvas"></canvas>
+  <div id="phaser-ui"></div>
   <script>
-    const socket = io('http://localhost:3000');
-    let challengeText = '';
+    // DEMO: ECS, Scene, UI
+    const engine = new NextGenEngine({ canvasId: 'babylon-canvas', uiParent: 'phaser-ui' });
 
-    function joinGame() {
-      const name = document.getElementById('name').value;
-      if (!name) return alert("Enter your name first!");
-
-      document.getElementById('login').classList.add('hidden');
-      document.getElementById('game').classList.remove('hidden');
-
-      socket.emit('join', name);
-    }
-
-    socket.on('start', (text) => {
-      challengeText = text;
-      document.getElementById('challenge').textContent = text;
-      document.getElementById('input').value = '';
-      document.getElementById('status').textContent = '';
+    // 1. registerComponent: Position and Rotator
+    engine.registerComponent("Position", class {
+      constructor(engine, cfg) {
+        this.pos = cfg && cfg.pos ? cfg.pos : [0, 1, 0];
+      }
+    });
+    engine.registerComponent("Rotator", class {
+      constructor(engine, cfg) {
+        this.speed = cfg && cfg.speed !== undefined ? cfg.speed : 1;
+      }
     });
 
-    socket.on('winner', (name) => {
-      document.getElementById('status').textContent = `${name} won the round! 🎉`;
+    // 2. createEntity + addComponent
+    const boxEntity = engine.createEntity("MyBox");
+    boxEntity.mesh = engine.addBabylonMesh("box", { size: 2, position: [0, 1, 0], color: [0, 0.7, 1] });
+    engine.addComponent(boxEntity, "Position", { pos: [0, 1, 0] });
+    engine.addComponent(boxEntity, "Rotator", { speed: 2 });
+
+    // 3. registerSystem: rotate all entities with Rotator
+    engine.registerSystem((dt, eng) => {
+      for (const ent of eng.entities) {
+        if (ent.mesh && ent.comps.Rotator) {
+          ent.mesh.rotation.y += dt * ent.comps.Rotator.speed;
+        }
+      }
     });
 
-    function checkTyped() {
-      const typed = document.getElementById('input').value;
-      socket.emit('typed', typed);
-    }
+    // 4. addPhaserText: show UI
+    engine.addPhaserText("Babylon + Phaser + ECS Demo", 40, 80, { font: '32px Arial', fill: '#fff' });
+
+    // Add a button to change scene
+    engine.addPhaserText("Click to change scene", 40, 130, { font: '24px Arial', fill: '#ff9' });
+    window.addEventListener('click', function onClick() {
+      engine.changeScene("NextScene");
+      // In new scene, add a ground and a sphere as demo
+      engine.addBabylonMesh("ground", { width: 20, height: 20 });
+      engine.addBabylonMesh("sphere", { diameter: 2, position: [2, 2, 0], color: [1, 0.6, 0.2] });
+      engine.addPhaserText("Scene changed! New content loaded.", 40, 80, { font: '28px Arial', fill: '#0ff' });
+      window.removeEventListener('click', onClick);
+    });
+
+    engine.start();
   </script>
 </body>
 </html>
