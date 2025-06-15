@@ -1,35 +1,68 @@
 // server.js
 const express = require('express');
 const http = require('http');
-const socketIo = require('socket.io');
-const app = express();
-const server = http.createServer(app);
-const io = socketIo(server, { cors: { origin: '*' } });
-const fetch = require('node-fetch'); // v2 if using CommonJS
-const domain = 'https://screenshare-am2q.onrender.com/'; // change to your target domain
+const { Server } = require('socket.io');
+const cors = require('cors');
 
-const ping = async () => {
-  try {
-    const res = await fetch(domain);
-    console.log(`[${new Date().toISOString()}] Status: ${res.status}`);
-  } catch (err) {
-    console.error(`[${new Date().toISOString()}] Error:`, err.message);
+const app = express();
+app.use(cors());
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*"
   }
+});
+
+let currentText = '';
+let winner = null;
+
+const generateRandomText = () => {
+  const texts = [
+    "hello world",
+    "fast fingers",
+    "javascript is cool",
+    "type this quick",
+    "competition begins",
+    "socket io rocks"
+  ];
+  return texts[Math.floor(Math.random() * texts.length)];
 };
 
-setInterval(ping, 10000); // every 10 seconds
-app.use(express.static("public"))
-io.on('connection', socket => {
-  console.log('User connected');
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
 
-  socket.on('screen-data', data => {
-    // Broadcast to parent dashboard
-    socket.broadcast.emit('screen-data', data);
+  socket.on('join', (name) => {
+    console.log(`${name} joined.`);
+    socket.data.name = name;
+
+    // Send current challenge
+    if (!currentText) {
+      currentText = generateRandomText();
+      winner = null;
+      io.emit('start', currentText);
+    } else {
+      socket.emit('start', currentText);
+    }
+  });
+
+  socket.on('typed', (typedText) => {
+    if (typedText === currentText && !winner) {
+      winner = socket.data.name;
+      io.emit('winner', winner);
+      // Reset in 5 seconds
+      setTimeout(() => {
+        currentText = generateRandomText();
+        winner = null;
+        io.emit('start', currentText);
+      }, 5000);
+    }
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected');
+    console.log('User disconnected:', socket.id);
   });
 });
-
-server.listen(3000, () => console.log('Server running on port 3000'));
+app.use(express.static("public"))
+server.listen(3000, () => {
+  console.log('Server running on http://localhost:3000');
+});
